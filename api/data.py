@@ -22,9 +22,33 @@ def current_time_string():
     # Save timestamps in New York time for consistent reporting.
     return datetime.now(NEW_YORK_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
-@app.get("/api/data")
-def health_check():
+@app.get("/")
+def root():
     return {"message": "Server is working"}
+
+@app.get("/api/data")
+def get_data():
+    records = list(collection.find({}, {"_id": 0}))
+
+    hourly_counts = {}
+
+    for record in records:
+        time_str = record.get("time")
+        if time_str:
+            hour = time_str[11:13]
+            hourly_counts[hour] = hourly_counts.get(hour, 0) + 1
+
+    hourly_data = []
+    for hour in sorted(hourly_counts.keys()):
+        hourly_data.append({
+            "hour": hour,
+            "count": hourly_counts[hour]
+        })
+
+    return {
+        "raw_data": records,
+        "hourly_data": hourly_data
+    }
 
 @app.post("/api/data")
 async def receive_data(request: Request):

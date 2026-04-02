@@ -44,12 +44,22 @@
 
     <script>
         async function loadCharts() {
-            const response = await fetch("http://127.0.0.1:8000/api/usage-per-hour");
+            const response = await fetch("/api/data")
+
+            if (!response.ok) {
+                console.error("Failed to fetch data:", response.statusText);
+                return;
+            }
+
             const data = await response.json();
+            const hourlyData = data.hourly_data;
 
-            const labels = data.map(item => item.hour);
-            const counts = data.map(item => item.count);
-
+            if (!hourlyData) {
+                throw new Error("hourly_data is missing");
+            }
+            
+            const labels = hourlyData.map(item => item.hour);
+            const counts = hourlyData.map(item => item.count);
             const lineCtx = document.getElementById("lineChart").getContext("2d");
             new Chart(lineCtx, {
                 type: "line",
