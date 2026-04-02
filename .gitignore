@@ -1,0 +1,12 @@
+# environment variables and secrets
+.env/
+*.key
+# esp32 build files
+.pio/
+.vscode/
+*.bin
+*.elf
+# python cache 
+__pycache__/
+*.pyc
+venv/
