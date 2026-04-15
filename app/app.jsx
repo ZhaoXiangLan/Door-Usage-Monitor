@@ -39,13 +39,14 @@ export default function DoorDashboard() {
   const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
-    fetch("/api/data")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to load API data");
-        }
-        return res.json();
-      })
+    const fetchData = () => {
+      fetch("/api/data")
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to load API data");
+          }
+          return res.json();
+        })
       .then((data) => {
         setApiData({
           raw_data: Array.isArray(data.raw_data) ? data.raw_data : [],
@@ -59,6 +60,12 @@ export default function DoorDashboard() {
       .finally(() => {
         setLoading(false);
       });
+    };
+      fetchData();
+
+      const interval = setInterval(fetchData, 3000);// Refresh every 3 seconds
+
+      return () => clearInterval(interval);
   }, []);
 
   const dashboardData = useMemo(() => {
