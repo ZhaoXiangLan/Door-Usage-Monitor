@@ -8,101 +8,79 @@ tests/
 ├── test_api_get_data.py     # GET /api/data tests
 └── test_api_post_data.py    # POST /api/data tests
 
+
 ---
 
 ## Fixtures
 
-### FakeCollection
-A fake MongoDB collection used to simulate database operations.
-
-- `find()` returns stored records
-- `insert_one()` stores new records
-
-### client fixture
-
-Purpose:
-- Set fake environment variables
-- Load FastAPI app
-- Replace MongoDB with FakeCollection
+| Fixture Name | Description |
+|-------------|------------|
+| FakeCollection | Simulates MongoDB collection (no real database needed) |
+| client | Creates FastAPI test client and replaces DB with fake |
 
 ---
 
 ## API Endpoint Tests
 
-### Root Endpoint
+### GET `/`
 
-File: `test_api_root.py`
-
-- `test_root`
-  - Check if server is running
-  - Expected: 200, {"message": "Server is working"}
+| Test Name | Setup | Request | Expected Result |
+|----------|------|--------|----------------|
+| test_root | None | GET / | 200, `{"message": "Server is working"}` |
 
 ---
 
-### GET /api/data
+### GET `/api/data`
 
-File: `test_api_get_data.py`
-
-- `test_get_data_empty`
-  - No data in DB
-  - Expected: empty raw_data and hourly_data
-
-- `test_get_data_hourly_aggregation`
-  - Multiple records
-  - Expected: correct grouping by hour
+| Test Name | Setup | Request | Expected Result |
+|----------|------|--------|----------------|
+| test_get_data_empty | Empty fake DB | GET /api/data | 200, empty `raw_data` and `hourly_data` |
+| test_get_data_hourly_aggregation | Insert 3 records | GET /api/data | 200, correct hourly grouping |
 
 ---
 
-### POST /api/data
+### POST `/api/data`
 
-File: `test_api_post_data.py`
-
-- `test_post_data_success`
-  - Valid request
-  - Expected: 200 and data saved
-
-- `test_post_data_unauthorized`
-  - Wrong API key
-  - Expected: 401
-
-- `test_post_data_missing_state`
-  - Missing required field
-  - Expected: 400
-
-- `test_post_data_default_device`
-  - Missing device
-  - Expected: default "esp32"
-
-- `test_post_data_invalid_state`
-  - Invalid state value
-  - Expected: 400
+| Test Name | Setup | Request | Expected Result |
+|----------|------|--------|----------------|
+| test_post_data_success | Valid API key | Valid JSON | 200, data saved |
+| test_post_data_unauthorized | Wrong API key | Valid JSON | 401 Unauthorized |
+| test_post_data_missing_state | Missing `state` | JSON without state | 400 Missing state |
+| test_post_data_default_device | Missing device | JSON without device | 200, device = "esp32" |
+| test_post_data_invalid_state | Invalid state value | `state="banana"` | 400 Invalid state |
 
 ---
 
 ## Edge Cases
 
-- Unauthorized API access
-- Missing required fields
-- Invalid input values
-- Empty database response
+| Scenario | Expected Behavior |
+|---------|-----------------|
+| Wrong API key | Request rejected (401) |
+| Missing required field | Request rejected (400) |
+| Invalid state value | Request rejected (400) |
+| No data in database | Empty response returned |
 
 ---
 
 ## Integration Test
 
-Scenario:
-1. Send POST request
-2. Retrieve data using GET
+| Test Name | Steps | Expected Result |
+|----------|------|----------------|
+| test_full_api_flow | POST → GET | Data appears and is counted correctly |
 
-Expected:
-- New record appears in raw_data
-- Hourly aggregation updates correctly
+Example:
 
----
+```python
+def test_full_api_flow(client):
+    test_client, _ = client
 
-## Notes
+    test_client.post(
+        "/api/data",
+        headers={"x-api-key": "test-api-key"},
+        json={"state": "open", "device": "Door_1"}
+    )
 
-- MongoDB is mocked using FakeCollection
-- No real database is required
-- Environment variables are faked during testing
-- tzdata is required for timezone support
+    response = test_client.get("/api/data")
+    data = response.json()
+
+    assert len(data["raw_data"]) == 1
