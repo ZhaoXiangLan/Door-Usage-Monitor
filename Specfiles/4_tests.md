@@ -2,12 +2,13 @@
 
 ## Test Structure
 
+```
 tests/
 ├── conftest.py          # Shared fixtures and fake database
 ├── test_api_root.py         # Root endpoint tests
 ├── test_api_get_data.py     # GET /api/data tests
 └── test_api_post_data.py    # POST /api/data tests
-
+```
 
 ---
 
