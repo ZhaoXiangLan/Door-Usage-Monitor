@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import Chart from "chart.js/auto";// 4.20.2026
+
 const doorColors = {
   "Door_1": {
     bg: "linear-gradient(135deg, #dbeafe, #eff6ff)",
@@ -37,6 +39,9 @@ export default function DoorDashboard() {
   const [apiData, setApiData] = useState({ raw_data: [], hourly_data: [] });
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
+  const [showHourlyModal, setShowHourlyModal] = useState(false); //4.20.2026
+  const chartRef = React.useRef(null); //4.20.2026
+  const chartInstanceRef = React.useRef(null);  //4.20.2026
 
   useEffect(() => {
     const fetchData = () => {
@@ -67,6 +72,60 @@ export default function DoorDashboard() {
 
       return () => clearInterval(interval);
   }, []);
+
+  // 4.20.2026 - Chart rendering effect
+  useEffect(() => {
+  if (!showHourlyModal || !chartRef.current) return;
+
+  const ctx = chartRef.current.getContext("2d");
+
+  if (chartInstanceRef.current) {
+    chartInstanceRef.current.destroy();
+  }
+
+  chartInstanceRef.current = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: apiData.hourly_data.map((item) => `${item.hour}:00`),
+      datasets: [
+        {
+          label: "Door Activity by Hour",
+          data: apiData.hourly_data.map((item) => item.count),
+          borderWidth: 2,
+          tension: 0.25,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Time",
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "Activity Count",
+          },
+        },
+      },
+    },
+  });
+
+  return () => {
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+      chartInstanceRef.current = null;
+    }
+  };
+  }, [showHourlyModal, apiData.hourly_data]);
+  // End of 4.20.2026 chart effect
 
   const dashboardData = useMemo(() => {
     const raw = apiData.raw_data || [];
@@ -243,7 +302,15 @@ export default function DoorDashboard() {
               </div>
 
               <div style={styles.panel}>
-                <div style={styles.panelTitle}>Hourly Activity</div>
+                <div style={styles.panelHeader}>
+                  <div style={styles.panelTitle}>Hourly Activity</div>
+                  <button
+                    style={styles.viewChartButton}
+                    onClick={() => setShowHourlyModal(true)}
+                  >
+                    View Chart
+                  </button>
+                </div>
 
                 {apiData.hourly_data.length === 0 ? (
                   <div style={styles.emptyState}>No hourly data found.</div>
