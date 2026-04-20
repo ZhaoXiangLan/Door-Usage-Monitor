@@ -19,7 +19,7 @@ Used when ESP32 sends door event data to the backend.
 | Field   | Type   | Required | Constraints |
 |--------|--------|----------|-------------|
 | state  | string | Yes      | Must be `open` |
-| device | string | No       | Defaults to `"Door_number"` |
+| device | string | Yes      | Defaults to `"Door_number"` |
 
 ---
 
