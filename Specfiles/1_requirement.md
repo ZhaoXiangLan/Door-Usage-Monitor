@@ -69,7 +69,6 @@ Door-Usage-Monitor/
 │
 ├── app/
 │   ├── app.jsx                     # React main component
-│   ├── index.jsx                   # React root file
 │   └── main.jsx                    # React entry point
 │
 ├── Esp32-Door-Usage/
@@ -98,6 +97,7 @@ Door-Usage-Monitor/
 ├── tests/                          # Backend tests
 │
 ├── index.html                      # Frontend HTML entry
+├── index.jsx                   # React root file
 ├── package.json                    # Frontend dependencies
 ├── vite.config.js                  # Vite configuration
 │

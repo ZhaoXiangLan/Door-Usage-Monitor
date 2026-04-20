@@ -343,7 +343,26 @@ export default function DoorDashboard() {
               Backend fields used: <b>raw_data</b>, <b>hourly_data</b>,{" "}
               <b>device</b>, <b>time</b>
             </div>
-          </>
+            {showHourlyModal && (
+              <div style={styles.modalOverlay} onClick={() => setShowHourlyModal(false)}>
+                <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+                  <div style={styles.modalHeader}>
+                    <h2 style={styles.modalTitle}>Hourly Activity Chart</h2>
+                    <button
+                      style={styles.closeButton}
+                      onClick={() => setShowHourlyModal(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div style={styles.modalChartArea}>
+                    <canvas ref={chartRef} />
+                  </div>
+                </div>
+            </div>
+          )}
+              </>
         )}
       </div>
     </div>
@@ -567,5 +586,69 @@ const styles = {
     color: "#64748b",
     fontSize: "0.92rem",
     textAlign: "center",
+  },
+  panelHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "18px",
+  },
+
+  viewChartButton: {
+    border: "none",
+    background: "#2563eb",
+    color: "#fff",
+    borderRadius: "10px",
+    padding: "8px 14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    padding: "20px",
+  },
+
+  modalCard: {
+    width: "min(900px, 95vw)",
+    backgroundColor: "#ffffff",
+    borderRadius: "24px",
+    padding: "24px",
+    boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+
+  modalTitle: {
+    margin: 0,
+    fontSize: "1.4rem",
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+
+  closeButton: {
+    border: "none",
+    background: "#e2e8f0",
+    color: "#0f172a",
+    borderRadius: "10px",
+    padding: "8px 14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  modalChartArea: {
+    height: "400px",
   },
 };
