@@ -99,6 +99,7 @@ Door-Usage-Monitor/
 ├── index.html                      # Frontend HTML entry
 ├── index.jsx                       # React root file
 ├── package.json                    # Frontend dependencies
+├── package-lock.json               # dependency lock file
 ├── vite.config.js                  # Vite configuration
 │
 ├── requirements.txt                # Python dependencies
