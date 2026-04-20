@@ -19,7 +19,6 @@ tests/
 | FakeCollection | Simulates MongoDB collection (no real database needed) |
 | client | Creates FastAPI test client and replaces DB with fake |
 
----
 ```python
 @pytest.fixture
 def client(monkeypatch):
@@ -35,6 +34,7 @@ def client(monkeypatch):
     test_client = TestClient(data_module.app) # create test client
     return test_client, fake_collection
 ```
+---
 
 ## API Endpoint Tests
 
