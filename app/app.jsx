@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Chart from "chart.js/auto";
+import logo from "./public/logo.png";
 
 const doorColors = {
   Door_1: {
@@ -707,7 +708,7 @@ const renderAbout = () => {
         </div>
 
         <div style={styles.sidebarLogoWrap}>
-          <img src="/logo.png" alt="logo" style={styles.sidebarLogo} />
+          <img src={logo} alt="logo" style={styles.sidebarLogo} />
         </div>
       </aside>
 
