@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 
+import Chart from "chart.js/auto";// 4.20.2026
+
 const doorColors = {
   "Door_1": {
     bg: "linear-gradient(135deg, #dbeafe, #eff6ff)",
@@ -37,15 +39,19 @@ export default function DoorDashboard() {
   const [apiData, setApiData] = useState({ raw_data: [], hourly_data: [] });
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
+  const [showHourlyModal, setShowHourlyModal] = useState(false); //4.20.2026
+  const chartRef = React.useRef(null); //4.20.2026
+  const chartInstanceRef = React.useRef(null);  //4.20.2026
 
   useEffect(() => {
-    fetch("/api/data")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to load API data");
-        }
-        return res.json();
-      })
+    const fetchData = () => {
+      fetch("/api/data")
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to load API data");
+          }
+          return res.json();
+        })
       .then((data) => {
         setApiData({
           raw_data: Array.isArray(data.raw_data) ? data.raw_data : [],
@@ -59,7 +65,67 @@ export default function DoorDashboard() {
       .finally(() => {
         setLoading(false);
       });
+    };
+      fetchData();
+
+      const interval = setInterval(fetchData, 3000);// Refresh every 3 seconds
+
+      return () => clearInterval(interval);
   }, []);
+
+  // 4.20.2026 - Chart rendering effect
+  useEffect(() => {
+  if (!showHourlyModal || !chartRef.current) return;
+
+  const ctx = chartRef.current.getContext("2d");
+
+  if (chartInstanceRef.current) {
+    chartInstanceRef.current.destroy();
+  }
+
+  chartInstanceRef.current = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: apiData.hourly_data.map((item) => `${item.hour}:00`),
+      datasets: [
+        {
+          label: "Door Activity by Hour",
+          data: apiData.hourly_data.map((item) => item.count),
+          borderWidth: 2,
+          tension: 0.25,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Time",
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: "Activity Count",
+          },
+        },
+      },
+    },
+  });
+
+  return () => {
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+      chartInstanceRef.current = null;
+    }
+  };
+  }, [showHourlyModal, apiData.hourly_data]);
+  // End of 4.20.2026 chart effect
 
   const dashboardData = useMemo(() => {
     const raw = apiData.raw_data || [];
@@ -236,7 +302,15 @@ export default function DoorDashboard() {
               </div>
 
               <div style={styles.panel}>
-                <div style={styles.panelTitle}>Hourly Activity</div>
+                <div style={styles.panelHeader}>
+                  <div style={styles.panelTitle}>Hourly Activity</div>
+                  <button
+                    style={styles.viewChartButton}
+                    onClick={() => setShowHourlyModal(true)}
+                  >
+                    View Chart
+                  </button>
+                </div>
 
                 {apiData.hourly_data.length === 0 ? (
                   <div style={styles.emptyState}>No hourly data found.</div>
@@ -269,7 +343,26 @@ export default function DoorDashboard() {
               Backend fields used: <b>raw_data</b>, <b>hourly_data</b>,{" "}
               <b>device</b>, <b>time</b>
             </div>
-          </>
+            {showHourlyModal && (
+              <div style={styles.modalOverlay} onClick={() => setShowHourlyModal(false)}>
+                <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+                  <div style={styles.modalHeader}>
+                    <h2 style={styles.modalTitle}>Hourly Activity Chart</h2>
+                    <button
+                      style={styles.closeButton}
+                      onClick={() => setShowHourlyModal(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div style={styles.modalChartArea}>
+                    <canvas ref={chartRef} />
+                  </div>
+                </div>
+            </div>
+          )}
+              </>
         )}
       </div>
     </div>
@@ -493,5 +586,69 @@ const styles = {
     color: "#64748b",
     fontSize: "0.92rem",
     textAlign: "center",
+  },
+  panelHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "18px",
+  },
+
+  viewChartButton: {
+    border: "none",
+    background: "#2563eb",
+    color: "#fff",
+    borderRadius: "10px",
+    padding: "8px 14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    padding: "20px",
+  },
+
+  modalCard: {
+    width: "min(900px, 95vw)",
+    backgroundColor: "#ffffff",
+    borderRadius: "24px",
+    padding: "24px",
+    boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+
+  modalTitle: {
+    margin: 0,
+    fontSize: "1.4rem",
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+
+  closeButton: {
+    border: "none",
+    background: "#e2e8f0",
+    color: "#0f172a",
+    borderRadius: "10px",
+    padding: "8px 14px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  modalChartArea: {
+    height: "400px",
   },
 };

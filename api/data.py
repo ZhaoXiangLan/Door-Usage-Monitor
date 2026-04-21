@@ -63,6 +63,9 @@ async def receive_data(request: Request):
 
     if state is None:
         raise HTTPException(status_code=400, detail="Missing state")
+    
+    if state not in ["open"]:
+        raise HTTPException(status_code=400, detail="Invalid state")
 
     record = {
         "time": current_time_string(),

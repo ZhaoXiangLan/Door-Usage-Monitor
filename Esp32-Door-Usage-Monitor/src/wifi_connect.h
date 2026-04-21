@@ -2,5 +2,6 @@
 #define WIFI_CONNECT_H
 
 void connectWiFi();
+void connectEnterpriseWiFi();
 
 #endif
