@@ -1,9 +1,6 @@
 # API Specification
 
-This document reflects the **current backend implementation in the repo** for the Door Usage Monitor project.
-
-**Repository:** ZhaoXiangLan/Door-Usage-Monitor  
-**Backend file:** `api/data.py`
+This document describes the current backend API implementation for the Door Usage Monitor project.
 
 ## Overview
 
@@ -109,6 +106,7 @@ The backend:
 ```json
 {
   "time": "2026-04-07 18:30:00",
+  "expireAt": "2026-05-07T18:30:00-04:00",
   "state": "open",
   "device": "Door_2"
 }
@@ -120,6 +118,7 @@ The backend:
 |---|---|---|
 | 401 | Missing or incorrect API key | `"Unauthorized"` |
 | 400 | Missing `state` field | `"Missing state"` |
+| 400 | Invalid `state` field | `"invalid state"` |
 
 ### Notes
 
@@ -172,13 +171,3 @@ x-api-key: THE_API_KEY
 ```
 
 ---
-
-## Current Limitations of the Backend
-
-The current backend is intentionally simple. It does **not** currently provide:
-
-- PLACE HERE
-
-So routes like these are **not currently implemented** in the repo:
-
-- `PLACE HERE`
