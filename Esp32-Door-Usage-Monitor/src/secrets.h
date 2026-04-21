@@ -2,11 +2,11 @@
 #define SECRETS_H
 // Wifi configuration
 constexpr const char* ssidList[] = {
-
+"tonylaptop"
 };
 
 constexpr const char* passwordList[] = {
-
+"mejiacuba"
 };
 
 constexpr int wifiCount = sizeof(ssidList) / sizeof(ssidList[0]);
