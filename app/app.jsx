@@ -36,8 +36,7 @@ const doorColors = {
 
 const sidebarItems = [
   "Dashboard",
-  "Door Rankings",
-  "Per Door",
+  "Door Info",
   "Analytics",
   "Recent Events",
   "About",
@@ -377,136 +376,104 @@ export default function App() {
     );
   };
 
-  const renderDoorRankings = () => {
-    return (
-      <div style={styles.subPage}>
-        <h1 style={styles.pageTitle}>Door Rankings</h1>
+ const renderDoors = () => {
+  return (
+    <div style={styles.subPage}>
+      <h1 style={styles.pageTitle}>Doors</h1>
 
-        <div style={styles.twoColGrid}>
-          <div style={styles.listPanel}>
-            <div style={styles.sectionHeader}>Ranking Table</div>
+      {/* Top: Rankings + Usage Share */}
+      <div style={styles.twoColGrid}>
+        <div style={styles.listPanel}>
+          <div style={styles.sectionHeader}>Door Rankings</div>
 
-            {processedData.rankedDoors.length === 0 ? (
-              <div style={styles.emptyState}>No rankings found.</div>
-            ) : (
-              processedData.rankedDoors.map((door, index) => (
-                <div style={styles.listRow} key={door.name}>
-                  <span>#{index + 1}</span>
-                  <span>{door.name}</span>
-                  <span>{door.count} total events</span>
+          {processedData.rankedDoors.length === 0 ? (
+            <div style={styles.emptyState}>No rankings found.</div>
+          ) : (
+            processedData.rankedDoors.map((door, index) => (
+              <div style={styles.listRow} key={door.name}>
+                <span>#{index + 1}</span>
+                <span>{door.name}</span>
+                <span>{door.count} total events</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div style={styles.graphCard}>
+          <div style={styles.sectionHeader}>Usage Share</div>
+
+          <div style={styles.horizontalGraphWrap}>
+            {processedData.rankedDoors.map((door) => {
+              const theme = getDoorTheme(door.name);
+              const width = `${(door.count / maxDoorCount) * 100}%`;
+
+              return (
+                <div key={door.name} style={styles.horizontalBarRow}>
+                  <div style={styles.graphDoorLabel}>{door.name}</div>
+                  <div style={styles.graphTrack}>
+                    <div
+                      style={{
+                        ...styles.graphFill,
+                        width,
+                        backgroundColor: theme.accent,
+                      }}
+                    />
+                  </div>
+                  <div style={styles.graphValueLabel}>{door.count}</div>
                 </div>
-              ))
-            )}
+              );
+            })}
           </div>
+        </div>
+      </div>
 
-          <div style={styles.graphCard}>
-            <div style={styles.sectionHeader}>Usage Share</div>
+      {/* Bottom: Per Door Cards */}
+      <div style={styles.cardGrid}>
+        {processedData.doors.map((door) => {
+          const theme = getDoorTheme(door.name);
 
-            {processedData.rankedDoors.length === 0 ? (
-              <div style={styles.emptyState}>No graph data found.</div>
-            ) : (
-              <div style={styles.horizontalGraphWrap}>
-                {processedData.rankedDoors.map((door) => {
-                  const theme = getDoorTheme(door.name);
-                  const width = `${(door.count / maxDoorCount) * 100}%`;
-                  const percent =
-                    processedData.totalEvents > 0
-                      ? ((door.count / processedData.totalEvents) * 100).toFixed(1)
-                      : "0.0";
+          return (
+            <div
+              key={door.name}
+              style={{
+                ...styles.infoCard,
+                backgroundColor: theme.bg,
+                border: `2px solid ${theme.border}`,
+              }}
+            >
+              <h3 style={{ color: theme.text }}>{door.name}</h3>
+
+              <p>Total: {door.count}</p>
+              <p>Latest: {formatTime(door.latestTime)}</p>
+
+              <div style={styles.miniBarsWrap}>
+                {processedData.hourLabels.map((hour) => {
+                  const value = door.hourlyCounts?.[hour] || 0;
+                  const height = `${(value / maxHourlyDoorValue) * 100}%`;
 
                   return (
-                    <div key={door.name} style={styles.horizontalBarRow}>
-                      <div style={styles.graphDoorLabel}>{door.name}</div>
-                      <div style={styles.graphTrack}>
+                    <div key={hour} style={styles.miniBarCol}>
+                      <div style={styles.miniBarArea}>
                         <div
                           style={{
-                            ...styles.graphFill,
-                            width,
+                            ...styles.miniBar,
+                            height,
                             backgroundColor: theme.accent,
                           }}
                         />
                       </div>
-                      <div style={styles.graphValueLabel}>
-                        {door.count} ({percent}%)
-                      </div>
+                      <div style={styles.miniBarLabel}>{hour}</div>
                     </div>
                   );
                 })}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
-    );
-  };
-
-  const renderPerDoor = () => {
-    return (
-      <div style={styles.subPage}>
-        <h1 style={styles.pageTitle}>Per Door</h1>
-
-        <div style={styles.cardGrid}>
-          {processedData.doors.length === 0 ? (
-            <div style={styles.emptyState}>No door data found.</div>
-          ) : (
-            processedData.doors.map((door) => {
-              const theme = getDoorTheme(door.name);
-
-              return (
-                <div
-                  key={door.name}
-                  style={{
-                    ...styles.infoCard,
-                    backgroundColor: theme.bg,
-                    border: `2px solid ${theme.border}`,
-                  }}
-                >
-                  <h3 style={{ ...styles.infoTitle, color: theme.text }}>
-                    {door.name}
-                  </h3>
-
-                  <p style={styles.infoText}>Total opens: {door.count}</p>
-                  <p style={styles.infoText}>
-                    Latest event: {formatTime(door.latestTime)}
-                  </p>
-
-                  <div style={styles.miniGraphTitle}>Per-Hour Activity</div>
-
-                  <div style={styles.miniBarsWrap}>
-                    {processedData.hourLabels.length === 0 ? (
-                      <div style={styles.smallMutedText}>No hourly data</div>
-                    ) : (
-                      processedData.hourLabels.map((hour) => {
-                        const value = door.hourlyCounts?.[hour] || 0;
-                        const height = `${(value / maxHourlyDoorValue) * 100}%`;
-
-                        return (
-                          <div key={`${door.name}-${hour}`} style={styles.miniBarCol}>
-                            <div style={styles.miniBarArea}>
-                              <div
-                                style={{
-                                  ...styles.miniBar,
-                                  height,
-                                  backgroundColor: theme.accent,
-                                }}
-                                title={`${door.name} at ${hour}:00 = ${value}`}
-                              />
-                            </div>
-                            <div style={styles.miniBarLabel}>{hour}</div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    );
-  };
-
+    </div>
+  );
+};
   const renderAnalytics = () => {
     return (
       <div style={styles.subPage}>
@@ -584,7 +551,7 @@ export default function App() {
   };
 
   const renderRecentEvents = () => {
-    const recent = [...(apiData.raw_data || [])].slice().reverse().slice(0, 30);
+    const recent = [...(apiData.raw_data || [])].slice().reverse().slice(0, 15);
 
     return (
       <div style={styles.subPage}>
@@ -676,8 +643,7 @@ export default function App() {
     }
 
     if (activePage === "Dashboard") return renderDashboard();
-    if (activePage === "Door Rankings") return renderDoorRankings();
-    if (activePage === "Per Door") return renderPerDoor();
+    if (activePage === "Door Info") return renderDoors();
     if (activePage === "Analytics") return renderAnalytics();
     if (activePage === "Recent Events") return renderRecentEvents();
     if (activePage === "About") return renderAbout();
@@ -1047,8 +1013,8 @@ const styles = {
     fontWeight: 600,
   },
   analyticsGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.4fr 1fr",
+    display: "flex",
+    flexDirection: "column",
     gap: "16px",
   },
   groupedBarsWrap: {
