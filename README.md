@@ -55,7 +55,9 @@ A magnetic sensor used to detect whether the door is open.
 
 Supplies stable power to the ESP32 and sensors.
 
-### 4. **Jumper Wires and Breadboard**
+For this student project, a portable power bank is currently used for simplicity and convenience. Future work is exploring the use of a rechargeable lithium battery combined with a solar panel to achieve a low-maintenance and long-term stable power solution. For permanent deployment, a more reliable and continuous power source will be considered.
+
+### 4. **Jumper Wires**
 
 Used to connect components during prototyping.
 
