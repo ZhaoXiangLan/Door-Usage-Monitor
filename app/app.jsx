@@ -578,65 +578,100 @@ export default function App() {
     );
   };
 
-  const renderAbout = () => {
-    return (
-      <div style={styles.subPage}>
-        <h1 style={styles.pageTitle}>About</h1>
+const renderAbout = () => {
+  return (
+    <div style={styles.subPage}>
+      <h1 style={styles.pageTitle}>About</h1>
 
-        <div style={styles.aboutGrid}>
-          <div style={styles.aboutCard}>
-            <div style={styles.sectionHeader}>Project</div>
-            <p style={styles.aboutText}>
-              This dashboard shows door usage activity from your backend and database.
-              The app refreshes every 3 seconds and updates the graphs and tables with
-              the latest event data.
-            </p>
-          </div>
+      <div style={styles.aboutGrid}>
+        {/* About Project */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>About This Project</div>
+          <p style={styles.aboutText}>
+            This project visualizes and compares usage between the two main entrances of the Temple University College of Engineering building.
+            Specifically, we focus on the doors located on 12th Street and the secondary entrance.
+          </p>
+          <p style={styles.aboutText}>
+            The website displays live data that updates in real time, allowing users to see how frequently each door is used throughout the day.
+          </p>
+        </div>
 
-          <div style={styles.aboutCard}>
-            <div style={styles.sectionHeader}>Live Data Used</div>
-            <p style={styles.aboutText}>
-              <b>raw_data</b> for recent door events and per-door grouping
-            </p>
-            <p style={styles.aboutText}>
-              <b>hourly_data</b> for hourly totals when available
-            </p>
-            <p style={styles.aboutText}>
-              Main fields: <b>device</b>, <b>time</b>, <b>hour</b>, <b>count</b>
-            </p>
-          </div>
+        {/* Why */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>Why We Did This</div>
+          <p style={styles.aboutText}>
+            We built this project because we thought it would be both interesting and useful—and honestly, just cool to see in action.
+          </p>
+          <p style={styles.aboutText}>
+            We were inspired by past students of Dr. Professor Obeid, who created a project that collected data from students pressing buttons.
+            However, we wanted to avoid bias in the data.
+          </p>
+          <p style={styles.aboutText}>
+            So instead of relying on user input, we used a passive data collection method so behavior stays natural.
+          </p>
+        </div>
 
-          <div style={styles.aboutCard}>
-            <div style={styles.sectionHeader}>Current Status</div>
-            <p style={styles.aboutText}>
-              Total events loaded: <b>{processedData.totalEvents}</b>
-            </p>
-            <p style={styles.aboutText}>
-              Doors detected: <b>{processedData.totalDoors}</b>
-            </p>
-            <p style={styles.aboutText}>
-              Busiest door:{" "}
-              <b>{processedData.busiestDoor?.name || "No data"}</b>
-            </p>
-            <p style={styles.aboutText}>
-              Feed status:{" "}
-              <b>{loading ? "Loading..." : errorText ? "API Error" : "Live Data"}</b>
-            </p>
-          </div>
+        {/* Ideas */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>Concept Exploration</div>
+          <p style={styles.aboutText}>We considered several approaches:</p>
+          <ul style={styles.aboutList}>
+            <li>Noise sensors</li>
+            <li>Room occupancy tracking</li>
+            <li>Door usage tracking</li>
+          </ul>
+          <p style={styles.aboutText}>
+            Door usage gave us the best combination of simplicity, reliability, and meaningful insight.
+          </p>
+        </div>
 
-          <div style={styles.aboutCard}>
-            <div style={styles.sectionHeader}>Pages</div>
-            <p style={styles.aboutText}>Dashboard: main 3-door summary + line graph</p>
-            <p style={styles.aboutText}>Door Rankings: ranking table + usage share graph</p>
-            <p style={styles.aboutText}>Per Door: individual door cards + mini graphs</p>
-            <p style={styles.aboutText}>Analytics: grouped hourly graph + total traffic graph</p>
-            <p style={styles.aboutText}>Recent Events: latest event feed</p>
-          </div>
+        {/* How it works */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>How It Works</div>
+          <p style={styles.aboutText}>
+            We use reed switches, which are magnetic sensors that detect whether a door is open or closed.
+          </p>
+          <ul style={styles.aboutList}>
+            <li>Door closed → magnet present → circuit complete</li>
+            <li>Door opens → circuit changes → event triggered</li>
+          </ul>
+
+          <p style={styles.aboutText}>That signal flows through the system:</p>
+          <ul style={styles.aboutList}>
+            <li>ESP32 + sensors (hardware layer)</li>
+            <li>Backend API (processing)</li>
+            <li>MongoDB (storage)</li>
+            <li>Frontend dashboard (visualization)</li>
+          </ul>
+        </div>
+
+        {/* GitHub */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>Repository</div>
+          <p style={styles.aboutText}>
+            For more technical details, check out the GitHub repository:
+          </p>
+          <a
+            href="https://github.com/ZhaoXiangLan/Door-Usage-Monitor"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.aboutLink}
+          >
+            Door Usage Monitor GitHub
+          </a>
+        </div>
+
+        {/* Thanks */}
+        <div style={styles.aboutCard}>
+          <div style={styles.sectionHeader}>Thanks</div>
+          <p style={styles.aboutText}>
+            Thanks for checking out the project—we hope you found it interesting.
+          </p>
         </div>
       </div>
-    );
-  };
-
+    </div>
+  );
+};
   const renderPage = () => {
     if (loading && activePage === "Dashboard") {
       return <div style={styles.loadingCard}>Loading dashboard...</div>;
@@ -1072,6 +1107,19 @@ const styles = {
     fontWeight: 600,
     lineHeight: 1.45,
   },
+
+  aboutList: {
+    margin: "0 16px 12px 30px",
+    color: "#334155",
+    fontWeight: 600,
+  },
+  aboutLink: {
+    display: "block",
+    margin: "0 16px 14px 16px",
+    color: "#2563eb",
+    fontWeight: 700,
+    textDecoration: "none",
+},
   emptyState: {
     padding: "30px 16px",
     textAlign: "center",
