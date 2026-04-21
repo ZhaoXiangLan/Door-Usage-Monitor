@@ -2,11 +2,11 @@
 #define SECRETS_H
 // Wifi configuration
 constexpr const char* ssidList[] = {
-
+"tonylaptop"
 };
 
 constexpr const char* passwordList[] = {
-
+"mejiacuba"
 };
 constexpr const char* enterpriseSSID = ""; // Enterprise WiFi SSID
 constexpr const char* enterpriseUsername = ""; // Enterprise WiFi username
