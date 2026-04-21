@@ -143,13 +143,13 @@ Follow these steps to deploy and run the Door Usage Monitor system.
 3. This will create a copy of the repository in your own GitHub account
 
 ### 2. Deploy the Project on Vercel
-1. Go to https://vercel.com
+1. Go to [Vercel](https://vercel.com)
 2. Click "Add New Project"
 3. Import your GitHub repository
 4. Vercel will automatically detect and build both frontend and backend
 
 ### 3. Set Up Database
-1. Go to MongoDB Atlas (or any cloud database)
+1. Go to [MongoDB Atlas](https://www.mongodb.com/) (or any cloud database)
 2. Create a database
 3. Get your Database Connection String
 Example:
