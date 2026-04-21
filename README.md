@@ -77,7 +77,7 @@ The backend is responsible for receiving data from ESP32 devices, validating it,
 #### 4. The backend generates a timestamp
 #### 5. The data is stored in MongoDB
 
-### Example JSON Request
+#### Example JSON Request
 ```
 {
   "state": "open",
@@ -152,7 +152,8 @@ Follow these steps to deploy and run the Door Usage Monitor system.
 1. Go to [MongoDB Atlas](https://www.mongodb.com/) (or any cloud database)
 2. Create a database
 3. Get your Database Connection String
-Example:
+
+#### Example:
 ```
 mongodb+srv://username:password@cluster.mongodb.net/
 ```
@@ -174,7 +175,6 @@ cd Door-Usage-Monitor
 1. Go to:
 ```
 Esp32-Door-Usage-Monitor/src/
-
 ```
 2. Edit secrets.h
 Update:
