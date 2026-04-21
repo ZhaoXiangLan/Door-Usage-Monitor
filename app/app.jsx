@@ -707,11 +707,7 @@ const renderAbout = () => {
         </div>
 
         <div style={styles.sidebarLogoWrap}>
-          <img
-            src="/logo.png"
-            alt="logo"
-            style={styles.sidebarLogo}
-            />
+          <img src="/logo.png" alt="logo" style={styles.sidebarLogo} />
         </div>
       </aside>
 
@@ -730,29 +726,31 @@ const styles = {
     fontFamily: "Arial, Helvetica, sans-serif",
     color: "#111827",
   },
-  sidebar: {
-    width: "220px",
-    background: "linear-gradient(180deg, #14532d, #1f7a45)",
-    color: "#ffffff",
-    padding: "18px 14px",
-    borderRight: "3px solid #0f3f22",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    gap: "20px",
-    flexShrink: 0,
-  },
-  sidebarLogoWrap: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: "10px",
-  },
+sidebar: {
+  width: "220px",
+  background: "linear-gradient(180deg, #14532d, #1f7a45)",
+  color: "#ffffff",
+  padding: "18px 14px",
+  borderRight: "3px solid #0f3f22",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  gap: "20px",
+  flexShrink: 0,
+},
 
-  sidebarLogo: {
-    width: "140px",
-    opacity: 0.9,
-  },
+sidebarLogoWrap: {
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  paddingBottom: "12px",
+},
+
+sidebarLogo: {
+  width: "140px",
+  height: "auto",
+  objectFit: "contain",
+},
   sidebarBrand: {
     fontSize: "1.5rem",
     fontWeight: 900,
