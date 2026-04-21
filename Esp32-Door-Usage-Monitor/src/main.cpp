@@ -6,6 +6,8 @@
 #include "sender.h"
 #include "secrets.h"
 
+constexpr const char* deviceId = "Door_2"; // Unique identifier for the device
+
 // Pin connected to the door sensor
 const int Door_Sensor_Pin = 18;
 // Variable to store the last state of the door
@@ -13,8 +15,6 @@ int Last_Door_State;
 //
 unsigned long lastSendTime = 0;
 const unsigned long debounceDelay = 300; // 200 ms debounce delay
-
-constexpr const char* deviceId = "Door_2"; // Unique identifier for the device
 
 void setup() {
 

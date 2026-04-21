@@ -126,6 +126,99 @@ React Frontend
 ```
 
 ---
+## How to use This Repository
+Follow these steps to deploy and run the Door Usage Monitor system.
+
+### 1. Fork the Repository
+1. Go to the project repository:
+     👉 https://github.com/ZhaoXiangLan/Door-Usage-Monitor
+2. Click the "Fork" button (top-right corner)
+3. This will create a copy of the repository in your own GitHub account
+
+### 2. Deploy the Project on Vercel
+1. Go to https://vercel.com
+2. Click "Add New Project"
+3. Import your GitHub repository
+4. Vercel will automatically detect and build both frontend and backend
+
+### 3. Set Up Database
+1. Go to MongoDB Atlas (or any cloud database)
+2. Create a database
+3. Get your Database Connection String
+Example:
+```
+mongodb+srv://username:password@cluster.mongodb.net/
+```
+
+### 4. Configure Environment Variables in Vercel
+In your Vercel project settings, add:
+| Variable      | Description               |
+|---------------|---------------------------|
+| Data_Base_URL |Database Connection String |
+| API_KEY       | Your custom API key       |
+
+### 5. Clone the Repository
+```
+git clone https://github.com/ZhaoXiangLan/Door-Usage-Monitor.git
+cd Door-Usage-Monitor
+```
+
+### 6. Configure ESP32 Firmware
+1. Go to:
+```
+Esp32-Door-Usage-Monitor/src/
+
+```
+2. Edit secrets.h
+Update:
+- WiFi SSID
+- WiFi password
+- API key
+- Server URL (your deployed backend API)
+
+3. Edit main.cpp
+Set your device ID:
+line 9:
+```
+constexpr const char* deviceId = "Door_2"; // Unique identifier for the device
+```
+4. Upload to ESP32
+- Open the ESP32 project in PlatformIO
+- Select your ESP32 board
+- Upload the code
+
+### 7. Hardware Connection
+Connect the reed switch:
+- One side → GPIO 18
+- Other side → GND
+
+### 8. Run the System
+1. Power on the ESP32
+2. Wait for it to connect to WiFi
+3. Open/close the door
+
+### 9.Verify the System
+You should see:
+- Data stored in MongoDB
+- Data shown on the frontend dashboard
+- Charts updating with door activity
+
+### What Happens Internally
+```
+Door opens
+   ↓
+Reed switch triggers
+   ↓
+ESP32 sends JSON
+   ↓
+Vercel API receives data
+   ↓
+MongoDB stores data
+   ↓
+Frontend displays results
+```
+
+---
 
 ## CI/CD
 
