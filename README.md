@@ -228,6 +228,59 @@ Frontend displays results
 
 ---
 
+## Proposed File Structure
+
+```text
+Door-Usage-Monitor/
+├── api/
+│   └── data.py                     # FastAPI backend
+│
+├── app/
+│   ├── app.jsx                     # React main component
+│   └── main.jsx                    # React entry point
+│
+├── Esp32-Door-Usage/
+│   ├── include/
+│   │   └── README                  # Header files description
+│   ├── lib/
+│   │   └── README                  # External libraries
+│   ├── src/
+│   │   ├── main.cpp                # Main ESP32 program
+│   │   ├── sender.cpp              # HTTP sending logic
+│   │   ├── sender.h
+│   │   ├── wifi_connect.cpp        # WiFi connection logic
+│   │   ├── wifi_connect.h
+│   │   └── secrets.h               # WiFi/API credentials
+│   ├── test/
+│   │   └── README                  # ESP32 test files
+│   ├── platformio.ini              # ESP32 project configuration
+│   └── .gitignore
+│
+├── Specfiles/
+│   ├── 1_requirements.md           # Project requirements
+│   ├── 2_data_models.md            # Data models
+│   ├── 3_api_spec.md               # API specification
+│   └── 4_tests.md                  # Test cases
+│
+├── tests/                          # Backend tests
+│   ├── conftest.py                 # pytest config
+│   ├── test_api_get_data.py        # test GET /api/data
+│   ├── test_api_post_data.py       # test POST /api/data
+│   ├── test_api_root.py            # test root path
+│   └── test_api_ttl.py             # test ttl auto-delete
+│
+├── index.html                      # Frontend HTML entry
+├── index.jsx                       # React root file
+├── package.json                    # Frontend dependencies
+├── package-lock.json               # dependency lock file
+├── vite.config.js                  # Vite configuration
+│
+├── requirements.txt                # Python dependencies
+├── README.md                       # Project overview
+└── .gitignore
+```
+
+---
 ## CI/CD
 
 ### Continuous Integration (CI)

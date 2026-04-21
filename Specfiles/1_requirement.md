@@ -95,6 +95,11 @@ Door-Usage-Monitor/
 │   └── 4_tests.md                  # Test cases
 │
 ├── tests/                          # Backend tests
+│   ├── conftest.py                 # pytest config
+│   ├── test_api_get_data.py        # test GET /api/data
+│   ├── test_api_post_data.py       # test POST /api/data
+│   ├── test_api_root.py            # test root path
+│   └── test_api_ttl.py             # test ttl auto-delete
 │
 ├── index.html                      # Frontend HTML entry
 ├── index.jsx                       # React root file
@@ -104,4 +109,5 @@ Door-Usage-Monitor/
 │
 ├── requirements.txt                # Python dependencies
 ├── README.md                       # Project overview
-├── .gitignore
+└── .gitignore
+```
