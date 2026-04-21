@@ -43,12 +43,13 @@ The time of each event will be recorded.
 
 The ESP32 provides Wi-Fi connectivity and processes sensor input. It sends door event data to the cloud API.
 
-https://www.amazon.com/ESP-WROOM-32-Development-Microcontroller-Integrated-Compatible/dp/B08D5ZD528?crid=230YCE77OCO3Z&dib=eyJ2IjoiMSJ9.XBINg-sjhfF_gUtnMiKGjhEeYdDItAFIfghSZYafKonJTgDJu1vNmyJW1jfkZDNF_rCq2i8ThNqUeY1w91yOHIBFVC84iEi-EOEM7AqlpaOTkp_z-HdlffdCBZ9amLXMTUo1bvJVhSlDhrc40GcsN0Yi9YWTCKliTkvFrS_vek19dwtb3GLs-a0Kov4F33XnWCaN9KN-gXz_WNf19rVhFgv2ZzGL3uOVB2AG4Wyqv2Q.qwq_Xq9nwgFpeBbKV_JaI5puUdOqwpFoSSp7c4Po3OA&dib_tag=se&keywords=esp32&qid=1776736651&sprefix=esp3%2Caps%2C160&sr=8-3&th=1
+[ESP32 Development Board](https://www.amazon.com/ESP-WROOM-32-Development-Microcontroller-Integrated-Compatibility/dp/B08D5ZD528)
+
 ### 2. **Reed Switch Sensor(NC)**
 
 A magnetic sensor used to detect whether the door is open.
 
-https://www.amazon.com/Gebildet-Recessed-Security-Magnetic-Normally/dp/B07YFBG27Y?crid=KRJF7H1K6A4A&dib=eyJ2IjoiMSJ9.XJrVlGqdXx4N_fTX3opLW0EZZ00R7d4Stx-s_yNubRSKECJ4J89RZ5-Oh9WrUAHHexbiVVm_Hci-MYHVem3vek52cGPHb7D_657s_oGpIC9KTqmNEZtGZKyDSJZOA04UcaBgjRIdhLRf4p7lIsORDzPggSeJXVEA1-rSyB4_oL7e5E75v4HeMDsL7ejjLOFXR-1wpf96ZOrMSQPJiID1QjZZgGLp2nRDesU2pozf8hw.YWQ1kgpvZcAdibiditWX_oGJoErIZniW4K5DZzcQjyU&dib_tag=se&keywords=reed%2Bswitch&qid=1776736665&sprefix=reed%2Caps%2C140&sr=8-4&th=1
+[Reed Switch Sensor](https://www.amazon.com/Gebildet-Recessed-Security-Magnetic-Normally/dp/B07YFBG27Y)
 
 ### 3. **Power Supply**
 
