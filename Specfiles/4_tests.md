@@ -4,10 +4,11 @@
 
 ```
 tests/
-├── conftest.py          # Shared fixtures and fake database
-├── test_api_root.py         # Root endpoint tests
-├── test_api_get_data.py     # GET /api/data tests
-└── test_api_post_data.py    # POST /api/data tests
+├── conftest.py                 # pytest config
+├── test_api_get_data.py        # test GET /api/data
+├── test_api_post_data.py       # test POST /api/data
+├── test_api_root.py            # test root path
+└── test_api_ttl.py             # test ttl auto-delete
 ```
 
 ---
@@ -64,6 +65,14 @@ def client(monkeypatch):
 | test_post_data_missing_state | Missing `state` | JSON without state | 400 Missing state |
 | test_post_data_default_device | Missing device | JSON without device | 200, device = "esp32" |
 | test_post_data_invalid_state | Invalid state value | `state="banana"` | 400 Invalid state |
+
+---
+
+### TTL (Expiration) Tests
+Verify that each inserted record includes a valid expiration timestamp (expireAt) for MongoDB TTL functionality.
+| Test Name | Setup | Request | Expected Result |
+|----------|------|--------|----------------|
+| test_post_contains_expireAt | Valid API key | POST /api/data | Record contains expireAt and is a valid future datetime |
 
 ---
 
