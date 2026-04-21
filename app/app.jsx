@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Chart from "chart.js/auto";
-import logo from "./public/logo.png";
+import logo from "../../public/logo.png";
 
 const doorColors = {
   Door_1: {
