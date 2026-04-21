@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from pymongo import MongoClient
-from datetime import datetime
 from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta
 import os
 
 app = FastAPI()
@@ -28,7 +28,7 @@ def root():
 
 @app.get("/api/data")
 def get_data():
-    records = list(collection.find({}, {"_id": 0}))
+    records = list(collection.find({}, {"_id": 0, "expireAt": 0}))
 
     hourly_counts = {}
 
@@ -69,6 +69,7 @@ async def receive_data(request: Request):
 
     record = {
         "time": current_time_string(),
+        "expireAt": datetime.now(NEW_YORK_TZ) + timedelta(days=30),
         "state": state,
         "device": device
     }
