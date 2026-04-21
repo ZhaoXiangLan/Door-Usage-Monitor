@@ -1,47 +1,55 @@
 import React, { useEffect, useMemo, useState } from "react";
-
-import Chart from "chart.js/auto";// 4.20.2026
+import Chart from "chart.js/auto";
 
 const doorColors = {
-  "Door_1": {
-    bg: "linear-gradient(135deg, #dbeafe, #eff6ff)",
+  Door_1: {
     border: "#93c5fd",
     text: "#1d4ed8",
-    badge: "#2563eb",
+    accent: "#2563eb",
+    bg: "#eff6ff",
   },
-  "Door_2": {
-    bg: "linear-gradient(135deg, #dcfce7, #f0fdf4)",
+  Door_2: {
     border: "#86efac",
     text: "#15803d",
-    badge: "#16a34a",
+    accent: "#16a34a",
+    bg: "#f0fdf4",
   },
-  "Door_3": {
-    bg: "linear-gradient(135deg, #fee2e2, #fef2f2)",
+  Door_3: {
     border: "#fca5a5",
     text: "#b91c1c",
-    badge: "#dc2626",
+    accent: "#dc2626",
+    bg: "#fef2f2",
   },
-  "Door_4": {
-    bg: "linear-gradient(135deg, #f3e8ff, #faf5ff)",
+  Door_4: {
     border: "#d8b4fe",
     text: "#7e22ce",
-    badge: "#9333ea",
+    accent: "#9333ea",
+    bg: "#faf5ff",
   },
   default: {
-    bg: "linear-gradient(135deg, #e2e8f0, #f8fafc)",
     border: "#cbd5e1",
     text: "#334155",
-    badge: "#475569",
+    accent: "#475569",
+    bg: "#f8fafc",
   },
 };
 
-export default function DoorDashboard() {
+const sidebarItems = [
+  "Dashboard",
+  "Door Rankings",
+  "Per Door",
+  "Hourly Breakdown",
+  "Recent Events",
+];
+
+export default function App() {
   const [apiData, setApiData] = useState({ raw_data: [], hourly_data: [] });
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
-  const [showHourlyModal, setShowHourlyModal] = useState(false); //4.20.2026
-  const chartRef = React.useRef(null); //4.20.2026
-  const chartInstanceRef = React.useRef(null);  //4.20.2026
+  const [activePage, setActivePage] = useState("Dashboard");
+
+  const chartRef = React.useRef(null);
+  const chartInstanceRef = React.useRef(null);
 
   useEffect(() => {
     const fetchData = () => {
@@ -52,84 +60,29 @@ export default function DoorDashboard() {
           }
           return res.json();
         })
-      .then((data) => {
-        setApiData({
-          raw_data: Array.isArray(data.raw_data) ? data.raw_data : [],
-          hourly_data: Array.isArray(data.hourly_data) ? data.hourly_data : [],
+        .then((data) => {
+          setApiData({
+            raw_data: Array.isArray(data.raw_data) ? data.raw_data : [],
+            hourly_data: Array.isArray(data.hourly_data) ? data.hourly_data : [],
+          });
+          setErrorText("");
+        })
+        .catch((err) => {
+          console.error(err);
+          setErrorText("Could not load live data.");
+        })
+        .finally(() => {
+          setLoading(false);
         });
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorText("Could not load live data.");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
     };
-      fetchData();
 
-      const interval = setInterval(fetchData, 3000);// Refresh every 3 seconds
-
-      return () => clearInterval(interval);
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
   }, []);
-
-  // 4.20.2026 - Chart rendering effect
-  useEffect(() => {
-  if (!showHourlyModal || !chartRef.current) return;
-
-  const ctx = chartRef.current.getContext("2d");
-
-  if (chartInstanceRef.current) {
-    chartInstanceRef.current.destroy();
-  }
-
-  chartInstanceRef.current = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: apiData.hourly_data.map((item) => `${item.hour}:00`),
-      datasets: [
-        {
-          label: "Door Activity by Hour",
-          data: apiData.hourly_data.map((item) => item.count),
-          borderWidth: 2,
-          tension: 0.25,
-          fill: false,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Time",
-          },
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "Activity Count",
-          },
-        },
-      },
-    },
-  });
-
-  return () => {
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.destroy();
-      chartInstanceRef.current = null;
-    }
-  };
-  }, [showHourlyModal, apiData.hourly_data]);
-  // End of 4.20.2026 chart effect
 
   const dashboardData = useMemo(() => {
     const raw = apiData.raw_data || [];
-
     const grouped = {};
 
     raw.forEach((item) => {
@@ -141,6 +94,7 @@ export default function DoorDashboard() {
           name: deviceName,
           count: 0,
           latestTime: time,
+          hourlyCounts: {},
         };
       }
 
@@ -148,6 +102,18 @@ export default function DoorDashboard() {
 
       if (time > grouped[deviceName].latestTime) {
         grouped[deviceName].latestTime = time;
+      }
+
+      const parsedHour =
+        typeof item.hour === "number"
+          ? item.hour
+          : typeof time === "string" && time.includes(":")
+          ? Number(time.split("T")[1]?.split(":")[0] ?? time.split(" ")[1]?.split(":")[0])
+          : NaN;
+
+      if (!Number.isNaN(parsedHour)) {
+        grouped[deviceName].hourlyCounts[parsedHour] =
+          (grouped[deviceName].hourlyCounts[parsedHour] || 0) + 1;
       }
     });
 
@@ -157,498 +123,624 @@ export default function DoorDashboard() {
 
     const totalEvents = raw.length;
     const totalDoors = doors.length;
+    const busiestDoor =
+      doors.length > 0
+        ? doors.reduce((max, current) => (current.count > max.count ? current : max))
+        : null;
 
-    let busiestDoor = null;
-    if (doors.length > 0) {
-      busiestDoor = doors.reduce((max, current) =>
-        current.count > max.count ? current : max
-      );
-    }
+    const rankedDoors = [...doors].sort((a, b) => b.count - a.count);
+
+    const doorStats = doors.slice(0, 3).map((door) => {
+      const hourValues = Object.values(door.hourlyCounts);
+      const peak = hourValues.length ? Math.max(...hourValues) : door.count;
+      const latest = formatTime(door.latestTime);
+
+      return {
+        name: door.name,
+        total: door.count,
+        peak,
+        latest,
+      };
+    });
 
     return {
       doors,
       totalEvents,
       totalDoors,
       busiestDoor,
+      rankedDoors,
+      doorStats,
     };
   }, [apiData]);
 
-  const maxHourlyCount = useMemo(() => {
-    if (!apiData.hourly_data || apiData.hourly_data.length === 0) return 1;
-    return Math.max(...apiData.hourly_data.map((item) => item.count || 0), 1);
+  const chartSeries = useMemo(() => {
+    const raw = apiData.raw_data || [];
+    const groupedByDoor = {};
+
+    raw.forEach((item) => {
+      const deviceName = item.device || "Unknown Door";
+      const time = item.time || "";
+
+      const parsedHour =
+        typeof item.hour === "number"
+          ? item.hour
+          : typeof time === "string" && time.includes(":")
+          ? Number(time.split("T")[1]?.split(":")[0] ?? time.split(" ")[1]?.split(":")[0])
+          : NaN;
+
+      if (Number.isNaN(parsedHour)) return;
+
+      if (!groupedByDoor[deviceName]) {
+        groupedByDoor[deviceName] = {};
+      }
+
+      groupedByDoor[deviceName][parsedHour] =
+        (groupedByDoor[deviceName][parsedHour] || 0) + 1;
+    });
+
+    let hourLabels = [];
+
+    if (apiData.hourly_data?.length) {
+      hourLabels = apiData.hourly_data
+        .map((item) => item.hour)
+        .filter((hour) => typeof hour === "number")
+        .sort((a, b) => a - b);
+    }
+
+    if (!hourLabels.length) {
+      const foundHours = new Set();
+      Object.values(groupedByDoor).forEach((doorMap) => {
+        Object.keys(doorMap).forEach((hour) => foundHours.add(Number(hour)));
+      });
+      hourLabels = Array.from(foundHours).sort((a, b) => a - b);
+    }
+
+    const doorNames = Object.keys(groupedByDoor)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+      .slice(0, 3);
+
+    return {
+      labels: hourLabels.map((hour) => `${hour}:00`),
+      doorNames,
+      datasets: doorNames.map((doorName) => ({
+        name: doorName,
+        data: hourLabels.map((hour) => groupedByDoor[doorName]?.[hour] || 0),
+      })),
+    };
   }, [apiData]);
 
-  const getDoorTheme = (doorName) => {
-    return doorColors[doorName] || doorColors.default;
-  };
+  useEffect(() => {
+    if (activePage !== "Dashboard") return;
+    if (!chartRef.current) return;
+    if (!chartSeries.labels.length || !chartSeries.datasets.length) return;
 
-  const formatTime = (timeString) => {
+    const ctx = chartRef.current.getContext("2d");
+
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+    }
+
+    chartInstanceRef.current = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: chartSeries.labels,
+        datasets: chartSeries.datasets.map((dataset) => {
+          const theme = doorColors[dataset.name] || doorColors.default;
+
+          return {
+            label: dataset.name,
+            data: dataset.data,
+            borderColor: theme.accent,
+            backgroundColor: theme.accent,
+            tension: 0.3,
+            fill: false,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          };
+        }),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Time",
+            },
+            grid: {
+              color: "#e2e8f0",
+            },
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Usage Count",
+            },
+            ticks: {
+              precision: 0,
+            },
+            grid: {
+              color: "#e2e8f0",
+            },
+          },
+        },
+      },
+    });
+
+    return () => {
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [activePage, chartSeries]);
+
+  function formatTime(timeString) {
     if (!timeString) return "No data";
     return timeString.replace("T", " ");
+  }
+
+  function getDoorTheme(doorName) {
+    return doorColors[doorName] || doorColors.default;
+  }
+
+  const renderDashboard = () => {
+    return (
+      <div style={styles.dashboardPage}>
+        {errorText && <div style={styles.errorBox}>{errorText}</div>}
+
+        <div style={styles.statsRow}>
+          {dashboardData.doorStats.length === 0 ? (
+            <div style={styles.emptyBigCard}>No door data found.</div>
+          ) : (
+            dashboardData.doorStats.map((door) => {
+              const theme = getDoorTheme(door.name);
+
+              return (
+                <div
+                  key={door.name}
+                  style={{
+                    ...styles.statCard,
+                    backgroundColor: theme.bg,
+                    border: `2px solid ${theme.border}`,
+                  }}
+                >
+                  <div style={{ ...styles.statDoorName, color: theme.text }}>
+                    {door.name}
+                  </div>
+
+                  <div style={styles.doorMetaRow}>
+                    <span style={styles.metaLabel}>Total Usage</span>
+                    <span style={{ ...styles.metaNumber, color: theme.text }}>
+                      {door.total}
+                    </span>
+                  </div>
+
+                  <div style={styles.doorMetaRow}>
+                    <span style={styles.metaLabel}>Peak Hour Usage</span>
+                    <span style={{ ...styles.metaNumber, color: theme.text }}>
+                      {door.peak}
+                    </span>
+                  </div>
+
+                  <div style={styles.doorMetaRow}>
+                    <span style={styles.metaLabel}>Latest Time</span>
+                    <span style={styles.metaTime}>{door.latest}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div style={styles.bigChartPanel}>
+          <div style={styles.panelHeaderSimple}>
+            <div style={styles.panelTitle}>General Door Usage Over Time</div>
+            <div style={styles.liveMiniStatus}>
+              <span
+                style={{
+                  ...styles.statusDot,
+                  backgroundColor: errorText ? "#ef4444" : "#22c55e",
+                }}
+              />
+              <span style={styles.liveMiniText}>
+                {loading ? "Loading..." : errorText ? "API Error" : "Live Data"}
+              </span>
+            </div>
+          </div>
+
+          {chartSeries.labels.length === 0 || chartSeries.datasets.length === 0 ? (
+            <div style={styles.emptyChartState}>Not enough data for chart.</div>
+          ) : (
+            <div style={styles.chartCanvasWrap}>
+              <canvas ref={chartRef} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDoorRankings = () => {
+    return (
+      <div style={styles.subPage}>
+        <h1 style={styles.pageTitle}>Door Rankings</h1>
+        <div style={styles.listPanel}>
+          {dashboardData.rankedDoors.length === 0 ? (
+            <div style={styles.emptyState}>No rankings found.</div>
+          ) : (
+            dashboardData.rankedDoors.map((door, index) => (
+              <div style={styles.listRow} key={door.name}>
+                <span>#{index + 1}</span>
+                <span>{door.name}</span>
+                <span>{door.count} total events</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPerDoor = () => {
+    return (
+      <div style={styles.subPage}>
+        <h1 style={styles.pageTitle}>Per Door</h1>
+        <div style={styles.cardGrid}>
+          {dashboardData.doors.length === 0 ? (
+            <div style={styles.emptyState}>No door data found.</div>
+          ) : (
+            dashboardData.doors.map((door) => {
+              const theme = getDoorTheme(door.name);
+
+              return (
+                <div
+                  key={door.name}
+                  style={{
+                    ...styles.infoCard,
+                    backgroundColor: theme.bg,
+                    border: `2px solid ${theme.border}`,
+                  }}
+                >
+                  <h3 style={{ ...styles.infoTitle, color: theme.text }}>{door.name}</h3>
+                  <p>Total opens: {door.count}</p>
+                  <p>Latest event: {formatTime(door.latestTime)}</p>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderHourlyBreakdown = () => {
+    return (
+      <div style={styles.subPage}>
+        <h1 style={styles.pageTitle}>Hourly Breakdown</h1>
+        <div style={styles.listPanel}>
+          {apiData.hourly_data.length === 0 ? (
+            <div style={styles.emptyState}>No hourly data found.</div>
+          ) : (
+            apiData.hourly_data.map((item) => (
+              <div style={styles.listRow} key={item.hour}>
+                <span>{item.hour}:00</span>
+                <span>{item.count} opens</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderRecentEvents = () => {
+    const recent = [...(apiData.raw_data || [])].slice().reverse();
+
+    return (
+      <div style={styles.subPage}>
+        <h1 style={styles.pageTitle}>Recent Events</h1>
+        <div style={styles.listPanel}>
+          {recent.length === 0 ? (
+            <div style={styles.emptyState}>No recent events found.</div>
+          ) : (
+            recent.map((item, index) => (
+              <div
+                style={styles.listRow}
+                key={`${item.device || "Unknown"}-${item.time || index}-${index}`}
+              >
+                <span>{item.device || "Unknown Door"}</span>
+                <span>{formatTime(item.time || "")}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderPage = () => {
+    if (loading && activePage === "Dashboard") {
+      return <div style={styles.loadingCard}>Loading dashboard...</div>;
+    }
+
+    if (activePage === "Dashboard") return renderDashboard();
+    if (activePage === "Door Rankings") return renderDoorRankings();
+    if (activePage === "Per Door") return renderPerDoor();
+    if (activePage === "Hourly Breakdown") return renderHourlyBreakdown();
+    if (activePage === "Recent Events") return renderRecentEvents();
+
+    return renderDashboard();
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.wrapper}>
-        <div style={styles.header}>
-          <div>
-            <h1 style={styles.title}>Door Usage Dashboard</h1>
-            <p style={styles.subtitle}>
-              Live door open events from your backend
-            </p>
-          </div>
-          <div style={styles.statusBox}>
-            <span
+    <div style={styles.appShell}>
+      <aside style={styles.sidebar}>
+        <div style={styles.sidebarBrand}>DOOR UI</div>
+
+        <div style={styles.sidebarMenu}>
+          {sidebarItems.map((item) => (
+            <button
+              key={item}
               style={{
-                ...styles.statusDot,
-                backgroundColor: errorText ? "#ef4444" : "#22c55e",
+                ...styles.sidebarBtn,
+                ...(activePage === item ? styles.sidebarBtnActive : {}),
               }}
-            />
-            <span style={styles.statusText}>
-              {loading ? "Loading..." : errorText ? "API Error" : "Live Data"}
-            </span>
-          </div>
+              onClick={() => setActivePage(item)}
+            >
+              {item}
+            </button>
+          ))}
         </div>
+      </aside>
 
-        {loading ? (
-          <div style={styles.loadingCard}>Loading dashboard...</div>
-        ) : (
-          <>
-            {errorText && (
-              <div style={styles.errorBox}>
-                {errorText}
-              </div>
-            )}
-
-            <div style={styles.summaryGrid}>
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryLabel}>Total Open Events</div>
-                <div style={styles.summaryValue}>
-                  {dashboardData.totalEvents}
-                </div>
-              </div>
-
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryLabel}>Total Doors</div>
-                <div style={styles.summaryValue}>
-                  {dashboardData.totalDoors}
-                </div>
-              </div>
-
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryLabel}>Busiest Door</div>
-                <div style={styles.summaryValueSmall}>
-                  {dashboardData.busiestDoor
-                    ? dashboardData.busiestDoor.name
-                    : "No data"}
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.mainGrid}>
-              <div style={styles.panel}>
-                <div style={styles.panelTitle}>Door Overview</div>
-                <div style={styles.doorGrid}>
-                  {dashboardData.doors.length === 0 ? (
-                    <div style={styles.emptyState}>No door data found.</div>
-                  ) : (
-                    dashboardData.doors.map((door) => {
-                      const theme = getDoorTheme(door.name);
-
-                      return (
-                        <div
-                          key={door.name}
-                          style={{
-                            ...styles.doorCard,
-                            background: theme.bg,
-                            border: `1px solid ${theme.border}`,
-                          }}
-                        >
-                          <div style={styles.doorTopRow}>
-                            <div
-                              style={{
-                                ...styles.doorBadge,
-                                backgroundColor: theme.badge,
-                              }}
-                            >
-                              {door.name}
-                            </div>
-                          </div>
-
-                          <div
-                            style={{
-                              ...styles.doorCount,
-                              color: theme.text,
-                            }}
-                          >
-                            {door.count}
-                          </div>
-
-                          <div style={styles.doorLabel}>Open Events</div>
-
-                          <div style={styles.divider} />
-
-                          <div style={styles.metaRow}>
-                            <span style={styles.metaTitle}>Latest Time</span>
-                            <span style={styles.metaValue}>
-                              {formatTime(door.latestTime)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.panel}>
-                <div style={styles.panelHeader}>
-                  <div style={styles.panelTitle}>Hourly Activity</div>
-                  <button
-                    style={styles.viewChartButton}
-                    onClick={() => setShowHourlyModal(true)}
-                  >
-                    View Chart
-                  </button>
-                </div>
-
-                {apiData.hourly_data.length === 0 ? (
-                  <div style={styles.emptyState}>No hourly data found.</div>
-                ) : (
-                  <div style={styles.chartBox}>
-                    {apiData.hourly_data.map((item) => {
-                      const barWidth = `${(item.count / maxHourlyCount) * 100}%`;
-
-                      return (
-                        <div key={item.hour} style={styles.chartRow}>
-                          <div style={styles.chartHour}>{item.hour}:00</div>
-                          <div style={styles.barTrack}>
-                            <div
-                              style={{
-                                ...styles.barFill,
-                                width: barWidth,
-                              }}
-                            />
-                          </div>
-                          <div style={styles.chartCount}>{item.count}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.footerNote}>
-              Backend fields used: <b>raw_data</b>, <b>hourly_data</b>,{" "}
-              <b>device</b>, <b>time</b>
-            </div>
-            {showHourlyModal && (
-              <div style={styles.modalOverlay} onClick={() => setShowHourlyModal(false)}>
-                <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-                  <div style={styles.modalHeader}>
-                    <h2 style={styles.modalTitle}>Hourly Activity Chart</h2>
-                    <button
-                      style={styles.closeButton}
-                      onClick={() => setShowHourlyModal(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-
-                  <div style={styles.modalChartArea}>
-                    <canvas ref={chartRef} />
-                  </div>
-                </div>
-            </div>
-          )}
-              </>
-        )}
-      </div>
+      <main style={styles.mainContent}>{renderPage()}</main>
     </div>
   );
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background:
-      "linear-gradient(180deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)",
-    padding: "32px 16px",
-    fontFamily: "Inter, Segoe UI, Roboto, Arial, sans-serif",
+  appShell: {
+    display: "flex",
+    width: "100%",
+    height: "100vh",
+    overflow: "hidden",
+    background: "#dfe6ee",
+    fontFamily: "Arial, Helvetica, sans-serif",
+    color: "#111827",
   },
-  wrapper: {
-    maxWidth: "1200px",
-    margin: "0 auto",
+  sidebar: {
+    width: "220px",
+    background: "linear-gradient(180deg, #14532d, #1f7a45)",
+    color: "#ffffff",
+    padding: "18px 14px",
+    borderRight: "3px solid #0f3f22",
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+    flexShrink: 0,
   },
-  header: {
+  sidebarBrand: {
+    fontSize: "1.5rem",
+    fontWeight: 900,
+    letterSpacing: "1px",
+    padding: "10px 8px",
+    border: "2px solid rgba(255, 255, 255, 0.35)",
+    background: "rgba(255, 255, 255, 0.08)",
+    textAlign: "center",
+  },
+  sidebarMenu: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  sidebarBtn: {
+    width: "100%",
+    border: "2px solid rgba(255, 255, 255, 0.2)",
+    background: "rgba(255, 255, 255, 0.08)",
+    color: "#ffffff",
+    padding: "12px 10px",
+    textAlign: "left",
+    fontWeight: 700,
+    cursor: "pointer",
+    borderRadius: 0,
+    transition: "0.15s ease",
+  },
+  sidebarBtnActive: {
+    background: "#ffffff",
+    color: "#14532d",
+    borderColor: "#ffffff",
+  },
+  mainContent: {
+    flex: 1,
+    height: "100vh",
+    overflow: "hidden",
+    padding: "18px",
+  },
+  dashboardPage: {
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  subPage: {
+    width: "100%",
+    height: "100%",
+    overflow: "auto",
+    paddingRight: "6px",
+  },
+  loadingCard: {
+    backgroundColor: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+    padding: "40px",
+    textAlign: "center",
+    color: "#334155",
+    fontSize: "1.1rem",
+  },
+  errorBox: {
+    backgroundColor: "#fef2f2",
+    color: "#b91c1c",
+    border: "1px solid #fecaca",
+    padding: "14px 16px",
+    fontWeight: 600,
+  },
+  statsRow: {
+    minHeight: "190px",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "14px",
+  },
+  statCard: {
+    boxShadow: "4px 4px 0 #94a3b8",
+    padding: "18px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  statDoorName: {
+    fontSize: "1.4rem",
+    fontWeight: 900,
+    marginBottom: "18px",
+  },
+  doorMetaRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    padding: "10px 0",
+    borderTop: "1px solid #dbe2ea",
+    alignItems: "center",
+  },
+  metaLabel: {
+    fontWeight: 700,
+    color: "#475569",
+    fontSize: "0.95rem",
+  },
+  metaNumber: {
+    fontWeight: 900,
+    fontSize: "1.05rem",
+  },
+  metaTime: {
+    fontWeight: 700,
+    color: "#0f172a",
+    fontSize: "0.92rem",
+    textAlign: "right",
+    wordBreak: "break-word",
+  },
+  bigChartPanel: {
+    flex: 1,
+    minHeight: 0,
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+  },
+  panelHeaderSimple: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: "16px",
+    gap: "12px",
+    marginBottom: "14px",
+    borderBottom: "2px solid #cbd5e1",
+    paddingBottom: "10px",
     flexWrap: "wrap",
-    marginBottom: "24px",
   },
-  title: {
-    margin: 0,
-    fontSize: "2.2rem",
-    color: "#0f172a",
+  panelTitle: {
+    fontSize: "1.2rem",
     fontWeight: 800,
+    color: "#0f172a",
   },
-  subtitle: {
-    margin: "8px 0 0 0",
-    color: "#475569",
-    fontSize: "1rem",
-  },
-  statusBox: {
+  liveMiniStatus: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
     backgroundColor: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "999px",
-    padding: "10px 16px",
-    boxShadow: "0 6px 20px rgba(15, 23, 42, 0.06)",
+    border: "1px solid #cbd5e1",
+    padding: "8px 12px",
   },
   statusDot: {
     width: "10px",
     height: "10px",
     borderRadius: "50%",
   },
-  statusText: {
-    fontWeight: 600,
+  liveMiniText: {
+    fontWeight: 700,
     color: "#334155",
   },
-  loadingCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "20px",
-    padding: "40px",
-    textAlign: "center",
-    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-    color: "#334155",
-    fontSize: "1.1rem",
+  chartCanvasWrap: {
+    flex: 1,
+    minHeight: 0,
+    position: "relative",
   },
-  errorBox: {
-    marginBottom: "20px",
-    backgroundColor: "#fef2f2",
-    color: "#b91c1c",
-    border: "1px solid #fecaca",
-    borderRadius: "14px",
-    padding: "14px 16px",
-    fontWeight: 600,
-  },
-  summaryGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "18px",
-    marginBottom: "24px",
-  },
-  summaryCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: "20px",
-    padding: "22px",
-    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-    border: "1px solid #e2e8f0",
-  },
-  summaryLabel: {
-    fontSize: "0.95rem",
+  emptyChartState: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     color: "#64748b",
-    marginBottom: "10px",
     fontWeight: 600,
+    backgroundColor: "#f8fafc",
+    border: "1px solid #dbe2ea",
   },
-  summaryValue: {
-    fontSize: "2.2rem",
-    fontWeight: 800,
-    color: "#0f172a",
+  emptyBigCard: {
+    gridColumn: "1 / -1",
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 700,
+    color: "#64748b",
+    minHeight: "140px",
   },
-  summaryValueSmall: {
-    fontSize: "1.5rem",
-    fontWeight: 800,
-    color: "#0f172a",
-    wordBreak: "break-word",
+  pageTitle: {
+    margin: "0 0 16px 0",
+    fontSize: "2rem",
+    fontWeight: 900,
   },
-  mainGrid: {
-    display: "grid",
-    gridTemplateColumns: "1.5fr 1fr",
-    gap: "24px",
+  listPanel: {
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
   },
-  panel: {
-    backgroundColor: "#ffffff",
-    borderRadius: "24px",
-    padding: "24px",
-    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-    border: "1px solid #e2e8f0",
-  },
-  panelTitle: {
-    fontSize: "1.2rem",
-    fontWeight: 800,
-    color: "#0f172a",
-    marginBottom: "18px",
-  },
-  doorGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "18px",
-  },
-  doorCard: {
-    borderRadius: "20px",
-    padding: "18px",
-    boxShadow: "0 12px 24px rgba(15, 23, 42, 0.06)",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease",
-  },
-  doorTopRow: {
+  listRow: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "18px",
-  },
-  doorBadge: {
-    color: "#ffffff",
-    borderRadius: "999px",
-    padding: "6px 12px",
-    fontSize: "0.8rem",
+    gap: "16px",
+    padding: "14px 16px",
+    borderBottom: "1px solid #cbd5e1",
     fontWeight: 700,
-    letterSpacing: "0.3px",
+    flexWrap: "wrap",
   },
-  doorCount: {
-    fontSize: "3rem",
-    fontWeight: 900,
-    lineHeight: 1,
-  },
-  doorLabel: {
-    marginTop: "8px",
-    color: "#475569",
-    fontWeight: 600,
-    fontSize: "0.95rem",
-  },
-  divider: {
-    height: "1px",
-    backgroundColor: "rgba(100, 116, 139, 0.2)",
-    margin: "16px 0",
-  },
-  metaRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-  metaTitle: {
-    fontSize: "0.8rem",
-    color: "#64748b",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-  },
-  metaValue: {
-    fontSize: "0.92rem",
-    color: "#0f172a",
-    fontWeight: 600,
-    wordBreak: "break-word",
-  },
-  chartBox: {
-    display: "flex",
-    flexDirection: "column",
+  cardGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: "14px",
   },
-  chartRow: {
-    display: "grid",
-    gridTemplateColumns: "70px 1fr 40px",
-    alignItems: "center",
-    gap: "12px",
+  infoCard: {
+    boxShadow: "4px 4px 0 #94a3b8",
+    padding: "16px",
   },
-  chartHour: {
-    fontWeight: 700,
-    color: "#334155",
-  },
-  barTrack: {
-    height: "14px",
-    backgroundColor: "#e2e8f0",
-    borderRadius: "999px",
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: "999px",
-    background: "linear-gradient(90deg, #3b82f6, #8b5cf6)",
-  },
-  chartCount: {
-    textAlign: "right",
-    fontWeight: 800,
-    color: "#0f172a",
+  infoTitle: {
+    marginTop: 0,
   },
   emptyState: {
     padding: "30px 16px",
     textAlign: "center",
     color: "#64748b",
     fontWeight: 600,
-  },
-  footerNote: {
-    marginTop: "18px",
-    color: "#64748b",
-    fontSize: "0.92rem",
-    textAlign: "center",
-  },
-  panelHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "18px",
-  },
-
-  viewChartButton: {
-    border: "none",
-    background: "#2563eb",
-    color: "#fff",
-    borderRadius: "10px",
-    padding: "8px 14px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  modalOverlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-    padding: "20px",
-  },
-
-  modalCard: {
-    width: "min(900px, 95vw)",
-    backgroundColor: "#ffffff",
-    borderRadius: "24px",
-    padding: "24px",
-    boxShadow: "0 20px 60px rgba(15, 23, 42, 0.25)",
-  },
-
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "20px",
-  },
-
-  modalTitle: {
-    margin: 0,
-    fontSize: "1.4rem",
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-
-  closeButton: {
-    border: "none",
-    background: "#e2e8f0",
-    color: "#0f172a",
-    borderRadius: "10px",
-    padding: "8px 14px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  modalChartArea: {
-    height: "400px",
   },
 };
