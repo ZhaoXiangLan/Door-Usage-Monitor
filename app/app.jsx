@@ -38,8 +38,9 @@ const sidebarItems = [
   "Dashboard",
   "Door Rankings",
   "Per Door",
-  "Hourly Breakdown",
+  "Analytics",
   "Recent Events",
+  "About",
 ];
 
 export default function App() {
@@ -81,13 +82,37 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const dashboardData = useMemo(() => {
+  function formatTime(timeString) {
+    if (!timeString) return "No data";
+    return String(timeString).replace("T", " ");
+  }
+
+  function getDoorTheme(doorName) {
+    return doorColors[doorName] || doorColors.default;
+  }
+
+  function getHourFromItem(item) {
+    if (typeof item?.hour === "number") return item.hour;
+
+    const time = item?.time || "";
+    if (typeof time !== "string") return NaN;
+
+    const match = time.match(/(?:T|\s)(\d{1,2}):/);
+    if (!match) return NaN;
+
+    return Number(match[1]);
+  }
+
+  const processedData = useMemo(() => {
     const raw = apiData.raw_data || [];
     const grouped = {};
+    const hoursFound = new Set();
+    const totalsByHour = {};
 
     raw.forEach((item) => {
       const deviceName = item.device || "Unknown Door";
       const time = item.time || "";
+      const parsedHour = getHourFromItem(item);
 
       if (!grouped[deviceName]) {
         grouped[deviceName] = {
@@ -104,110 +129,86 @@ export default function App() {
         grouped[deviceName].latestTime = time;
       }
 
-      const parsedHour =
-        typeof item.hour === "number"
-          ? item.hour
-          : typeof time === "string" && time.includes(":")
-          ? Number(time.split("T")[1]?.split(":")[0] ?? time.split(" ")[1]?.split(":")[0])
-          : NaN;
-
       if (!Number.isNaN(parsedHour)) {
+        hoursFound.add(parsedHour);
         grouped[deviceName].hourlyCounts[parsedHour] =
           (grouped[deviceName].hourlyCounts[parsedHour] || 0) + 1;
+
+        totalsByHour[parsedHour] = (totalsByHour[parsedHour] || 0) + 1;
       }
     });
+
+    if (Array.isArray(apiData.hourly_data)) {
+      apiData.hourly_data.forEach((item) => {
+        if (typeof item.hour === "number") {
+          hoursFound.add(item.hour);
+          if (typeof item.count === "number") {
+            totalsByHour[item.hour] = item.count;
+          }
+        }
+      });
+    }
 
     const doors = Object.values(grouped).sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true })
     );
 
+    const rankedDoors = [...doors].sort((a, b) => b.count - a.count);
+
     const totalEvents = raw.length;
     const totalDoors = doors.length;
-    const busiestDoor =
-      doors.length > 0
-        ? doors.reduce((max, current) => (current.count > max.count ? current : max))
-        : null;
+    const busiestDoor = rankedDoors.length ? rankedDoors[0] : null;
 
-    const rankedDoors = [...doors].sort((a, b) => b.count - a.count);
+    const hourLabels = Array.from(hoursFound).sort((a, b) => a - b);
 
     const doorStats = doors.slice(0, 3).map((door) => {
       const hourValues = Object.values(door.hourlyCounts);
       const peak = hourValues.length ? Math.max(...hourValues) : door.count;
-      const latest = formatTime(door.latestTime);
 
       return {
         name: door.name,
         total: door.count,
         peak,
-        latest,
+        latest: formatTime(door.latestTime),
       };
     });
 
+    const totalsPerHourRows = hourLabels.map((hour) => ({
+      hour,
+      count: totalsByHour[hour] || 0,
+    }));
+
     return {
       doors,
+      rankedDoors,
       totalEvents,
       totalDoors,
       busiestDoor,
-      rankedDoors,
+      hourLabels,
       doorStats,
+      totalsPerHourRows,
     };
   }, [apiData]);
 
   const chartSeries = useMemo(() => {
-    const raw = apiData.raw_data || [];
-    const groupedByDoor = {};
-
-    raw.forEach((item) => {
-      const deviceName = item.device || "Unknown Door";
-      const time = item.time || "";
-
-      const parsedHour =
-        typeof item.hour === "number"
-          ? item.hour
-          : typeof time === "string" && time.includes(":")
-          ? Number(time.split("T")[1]?.split(":")[0] ?? time.split(" ")[1]?.split(":")[0])
-          : NaN;
-
-      if (Number.isNaN(parsedHour)) return;
-
-      if (!groupedByDoor[deviceName]) {
-        groupedByDoor[deviceName] = {};
-      }
-
-      groupedByDoor[deviceName][parsedHour] =
-        (groupedByDoor[deviceName][parsedHour] || 0) + 1;
-    });
-
-    let hourLabels = [];
-
-    if (apiData.hourly_data?.length) {
-      hourLabels = apiData.hourly_data
-        .map((item) => item.hour)
-        .filter((hour) => typeof hour === "number")
-        .sort((a, b) => a - b);
-    }
-
-    if (!hourLabels.length) {
-      const foundHours = new Set();
-      Object.values(groupedByDoor).forEach((doorMap) => {
-        Object.keys(doorMap).forEach((hour) => foundHours.add(Number(hour)));
-      });
-      hourLabels = Array.from(foundHours).sort((a, b) => a - b);
-    }
-
-    const doorNames = Object.keys(groupedByDoor)
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    const doorNames = processedData.doors
+      .map((door) => door.name)
       .slice(0, 3);
 
     return {
-      labels: hourLabels.map((hour) => `${hour}:00`),
+      labels: processedData.hourLabels.map((hour) => `${hour}:00`),
       doorNames,
-      datasets: doorNames.map((doorName) => ({
-        name: doorName,
-        data: hourLabels.map((hour) => groupedByDoor[doorName]?.[hour] || 0),
-      })),
+      datasets: doorNames.map((doorName) => {
+        const door = processedData.doors.find((d) => d.name === doorName);
+        return {
+          name: doorName,
+          data: processedData.hourLabels.map(
+            (hour) => door?.hourlyCounts?.[hour] || 0
+          ),
+        };
+      }),
     };
-  }, [apiData]);
+  }, [processedData]);
 
   useEffect(() => {
     if (activePage !== "Dashboard") return;
@@ -225,7 +226,7 @@ export default function App() {
       data: {
         labels: chartSeries.labels,
         datasets: chartSeries.datasets.map((dataset) => {
-          const theme = doorColors[dataset.name] || doorColors.default;
+          const theme = getDoorTheme(dataset.name);
 
           return {
             label: dataset.name,
@@ -284,14 +285,20 @@ export default function App() {
     };
   }, [activePage, chartSeries]);
 
-  function formatTime(timeString) {
-    if (!timeString) return "No data";
-    return timeString.replace("T", " ");
-  }
+  const maxDoorCount = Math.max(
+    ...processedData.rankedDoors.map((door) => door.count),
+    1
+  );
 
-  function getDoorTheme(doorName) {
-    return doorColors[doorName] || doorColors.default;
-  }
+  const maxHourlyDoorValue = Math.max(
+    ...chartSeries.datasets.flatMap((set) => set.data),
+    1
+  );
+
+  const maxTotalHourlyValue = Math.max(
+    ...processedData.totalsPerHourRows.map((row) => row.count),
+    1
+  );
 
   const renderDashboard = () => {
     return (
@@ -299,10 +306,10 @@ export default function App() {
         {errorText && <div style={styles.errorBox}>{errorText}</div>}
 
         <div style={styles.statsRow}>
-          {dashboardData.doorStats.length === 0 ? (
+          {processedData.doorStats.length === 0 ? (
             <div style={styles.emptyBigCard}>No door data found.</div>
           ) : (
-            dashboardData.doorStats.map((door) => {
+            processedData.doorStats.map((door) => {
               const theme = getDoorTheme(door.name);
 
               return (
@@ -374,18 +381,60 @@ export default function App() {
     return (
       <div style={styles.subPage}>
         <h1 style={styles.pageTitle}>Door Rankings</h1>
-        <div style={styles.listPanel}>
-          {dashboardData.rankedDoors.length === 0 ? (
-            <div style={styles.emptyState}>No rankings found.</div>
-          ) : (
-            dashboardData.rankedDoors.map((door, index) => (
-              <div style={styles.listRow} key={door.name}>
-                <span>#{index + 1}</span>
-                <span>{door.name}</span>
-                <span>{door.count} total events</span>
+
+        <div style={styles.twoColGrid}>
+          <div style={styles.listPanel}>
+            <div style={styles.sectionHeader}>Ranking Table</div>
+
+            {processedData.rankedDoors.length === 0 ? (
+              <div style={styles.emptyState}>No rankings found.</div>
+            ) : (
+              processedData.rankedDoors.map((door, index) => (
+                <div style={styles.listRow} key={door.name}>
+                  <span>#{index + 1}</span>
+                  <span>{door.name}</span>
+                  <span>{door.count} total events</span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={styles.graphCard}>
+            <div style={styles.sectionHeader}>Usage Share</div>
+
+            {processedData.rankedDoors.length === 0 ? (
+              <div style={styles.emptyState}>No graph data found.</div>
+            ) : (
+              <div style={styles.horizontalGraphWrap}>
+                {processedData.rankedDoors.map((door) => {
+                  const theme = getDoorTheme(door.name);
+                  const width = `${(door.count / maxDoorCount) * 100}%`;
+                  const percent =
+                    processedData.totalEvents > 0
+                      ? ((door.count / processedData.totalEvents) * 100).toFixed(1)
+                      : "0.0";
+
+                  return (
+                    <div key={door.name} style={styles.horizontalBarRow}>
+                      <div style={styles.graphDoorLabel}>{door.name}</div>
+                      <div style={styles.graphTrack}>
+                        <div
+                          style={{
+                            ...styles.graphFill,
+                            width,
+                            backgroundColor: theme.accent,
+                          }}
+                        />
+                      </div>
+                      <div style={styles.graphValueLabel}>
+                        {door.count} ({percent}%)
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))
-          )}
+            )}
+          </div>
         </div>
       </div>
     );
@@ -395,11 +444,12 @@ export default function App() {
     return (
       <div style={styles.subPage}>
         <h1 style={styles.pageTitle}>Per Door</h1>
+
         <div style={styles.cardGrid}>
-          {dashboardData.doors.length === 0 ? (
+          {processedData.doors.length === 0 ? (
             <div style={styles.emptyState}>No door data found.</div>
           ) : (
-            dashboardData.doors.map((door) => {
+            processedData.doors.map((door) => {
               const theme = getDoorTheme(door.name);
 
               return (
@@ -411,9 +461,43 @@ export default function App() {
                     border: `2px solid ${theme.border}`,
                   }}
                 >
-                  <h3 style={{ ...styles.infoTitle, color: theme.text }}>{door.name}</h3>
-                  <p>Total opens: {door.count}</p>
-                  <p>Latest event: {formatTime(door.latestTime)}</p>
+                  <h3 style={{ ...styles.infoTitle, color: theme.text }}>
+                    {door.name}
+                  </h3>
+
+                  <p style={styles.infoText}>Total opens: {door.count}</p>
+                  <p style={styles.infoText}>
+                    Latest event: {formatTime(door.latestTime)}
+                  </p>
+
+                  <div style={styles.miniGraphTitle}>Per-Hour Activity</div>
+
+                  <div style={styles.miniBarsWrap}>
+                    {processedData.hourLabels.length === 0 ? (
+                      <div style={styles.smallMutedText}>No hourly data</div>
+                    ) : (
+                      processedData.hourLabels.map((hour) => {
+                        const value = door.hourlyCounts?.[hour] || 0;
+                        const height = `${(value / maxHourlyDoorValue) * 100}%`;
+
+                        return (
+                          <div key={`${door.name}-${hour}`} style={styles.miniBarCol}>
+                            <div style={styles.miniBarArea}>
+                              <div
+                                style={{
+                                  ...styles.miniBar,
+                                  height,
+                                  backgroundColor: theme.accent,
+                                }}
+                                title={`${door.name} at ${hour}:00 = ${value}`}
+                              />
+                            </div>
+                            <div style={styles.miniBarLabel}>{hour}</div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -423,33 +507,92 @@ export default function App() {
     );
   };
 
-  const renderHourlyBreakdown = () => {
+  const renderAnalytics = () => {
     return (
       <div style={styles.subPage}>
-        <h1 style={styles.pageTitle}>Hourly Breakdown</h1>
-        <div style={styles.listPanel}>
-          {apiData.hourly_data.length === 0 ? (
-            <div style={styles.emptyState}>No hourly data found.</div>
-          ) : (
-            apiData.hourly_data.map((item) => (
-              <div style={styles.listRow} key={item.hour}>
-                <span>{item.hour}:00</span>
-                <span>{item.count} opens</span>
+        <h1 style={styles.pageTitle}>Analytics</h1>
+
+        <div style={styles.analyticsGrid}>
+          <div style={styles.graphCardWide}>
+            <div style={styles.sectionHeader}>Hourly Comparison by Door</div>
+
+            {processedData.hourLabels.length === 0 || chartSeries.datasets.length === 0 ? (
+              <div style={styles.emptyState}>No hourly comparison data found.</div>
+            ) : (
+              <div style={styles.groupedBarsWrap}>
+                {processedData.hourLabels.map((hour, index) => (
+                  <div key={hour} style={styles.groupedHourCol}>
+                    <div style={styles.groupedBarsArea}>
+                      {chartSeries.datasets.map((set) => {
+                        const theme = getDoorTheme(set.name);
+                        const value = set.data[index] || 0;
+                        const height = `${(value / maxHourlyDoorValue) * 100}%`;
+
+                        return (
+                          <div
+                            key={`${set.name}-${hour}`}
+                            style={{
+                              ...styles.groupedBar,
+                              height,
+                              backgroundColor: theme.accent,
+                            }}
+                            title={`${set.name} at ${hour}:00 = ${value}`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div style={styles.groupedHourLabel}>{hour}:00</div>
+                  </div>
+                ))}
               </div>
-            ))
-          )}
+            )}
+          </div>
+
+          <div style={styles.graphCard}>
+            <div style={styles.sectionHeader}>Total Traffic by Hour</div>
+
+            {processedData.totalsPerHourRows.length === 0 ? (
+              <div style={styles.emptyState}>No total hourly data found.</div>
+            ) : (
+              <div style={styles.horizontalGraphWrap}>
+                {processedData.totalsPerHourRows.map((row) => {
+                  const width = `${(row.count / maxTotalHourlyValue) * 100}%`;
+
+                  return (
+                    <div key={row.hour} style={styles.horizontalBarRow}>
+                      <div style={styles.graphDoorLabel}>{row.hour}:00</div>
+                      <div style={styles.graphTrack}>
+                        <div
+                          style={{
+                            ...styles.graphFill,
+                            width,
+                            backgroundColor: "#334155",
+                          }}
+                        />
+                      </div>
+                      <div style={styles.graphValueLabel}>{row.count}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
   const renderRecentEvents = () => {
-    const recent = [...(apiData.raw_data || [])].slice().reverse();
+    const recent = [...(apiData.raw_data || [])].slice().reverse().slice(0, 30);
 
     return (
       <div style={styles.subPage}>
         <h1 style={styles.pageTitle}>Recent Events</h1>
+
         <div style={styles.listPanel}>
+          <div style={styles.sectionHeader}>Latest Door Opens</div>
+
           {recent.length === 0 ? (
             <div style={styles.emptyState}>No recent events found.</div>
           ) : (
@@ -468,6 +611,65 @@ export default function App() {
     );
   };
 
+  const renderAbout = () => {
+    return (
+      <div style={styles.subPage}>
+        <h1 style={styles.pageTitle}>About</h1>
+
+        <div style={styles.aboutGrid}>
+          <div style={styles.aboutCard}>
+            <div style={styles.sectionHeader}>Project</div>
+            <p style={styles.aboutText}>
+              This dashboard shows door usage activity from your backend and database.
+              The app refreshes every 3 seconds and updates the graphs and tables with
+              the latest event data.
+            </p>
+          </div>
+
+          <div style={styles.aboutCard}>
+            <div style={styles.sectionHeader}>Live Data Used</div>
+            <p style={styles.aboutText}>
+              <b>raw_data</b> for recent door events and per-door grouping
+            </p>
+            <p style={styles.aboutText}>
+              <b>hourly_data</b> for hourly totals when available
+            </p>
+            <p style={styles.aboutText}>
+              Main fields: <b>device</b>, <b>time</b>, <b>hour</b>, <b>count</b>
+            </p>
+          </div>
+
+          <div style={styles.aboutCard}>
+            <div style={styles.sectionHeader}>Current Status</div>
+            <p style={styles.aboutText}>
+              Total events loaded: <b>{processedData.totalEvents}</b>
+            </p>
+            <p style={styles.aboutText}>
+              Doors detected: <b>{processedData.totalDoors}</b>
+            </p>
+            <p style={styles.aboutText}>
+              Busiest door:{" "}
+              <b>{processedData.busiestDoor?.name || "No data"}</b>
+            </p>
+            <p style={styles.aboutText}>
+              Feed status:{" "}
+              <b>{loading ? "Loading..." : errorText ? "API Error" : "Live Data"}</b>
+            </p>
+          </div>
+
+          <div style={styles.aboutCard}>
+            <div style={styles.sectionHeader}>Pages</div>
+            <p style={styles.aboutText}>Dashboard: main 3-door summary + line graph</p>
+            <p style={styles.aboutText}>Door Rankings: ranking table + usage share graph</p>
+            <p style={styles.aboutText}>Per Door: individual door cards + mini graphs</p>
+            <p style={styles.aboutText}>Analytics: grouped hourly graph + total traffic graph</p>
+            <p style={styles.aboutText}>Recent Events: latest event feed</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPage = () => {
     if (loading && activePage === "Dashboard") {
       return <div style={styles.loadingCard}>Loading dashboard...</div>;
@@ -476,8 +678,9 @@ export default function App() {
     if (activePage === "Dashboard") return renderDashboard();
     if (activePage === "Door Rankings") return renderDoorRankings();
     if (activePage === "Per Door") return renderPerDoor();
-    if (activePage === "Hourly Breakdown") return renderHourlyBreakdown();
+    if (activePage === "Analytics") return renderAnalytics();
     if (activePage === "Recent Events") return renderRecentEvents();
+    if (activePage === "About") return renderAbout();
 
     return renderDashboard();
   };
@@ -711,6 +914,14 @@ const styles = {
     fontSize: "2rem",
     fontWeight: 900,
   },
+  sectionHeader: {
+    padding: "14px 16px",
+    borderBottom: "2px solid #e2e8f0",
+    fontWeight: 900,
+    fontSize: "1rem",
+    color: "#0f172a",
+    backgroundColor: "#f8fafc",
+  },
   listPanel: {
     background: "#ffffff",
     border: "2px solid #94a3b8",
@@ -725,9 +936,56 @@ const styles = {
     fontWeight: 700,
     flexWrap: "wrap",
   },
+  twoColGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+  },
+  graphCard: {
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+  },
+  graphCardWide: {
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+  },
+  horizontalGraphWrap: {
+    padding: "16px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  horizontalBarRow: {
+    display: "grid",
+    gridTemplateColumns: "90px 1fr 90px",
+    gap: "12px",
+    alignItems: "center",
+  },
+  graphDoorLabel: {
+    fontWeight: 800,
+    color: "#334155",
+  },
+  graphTrack: {
+    height: "18px",
+    backgroundColor: "#e2e8f0",
+    borderRadius: "999px",
+    overflow: "hidden",
+  },
+  graphFill: {
+    height: "100%",
+    borderRadius: "999px",
+  },
+  graphValueLabel: {
+    textAlign: "right",
+    fontWeight: 800,
+    color: "#0f172a",
+    fontSize: "0.92rem",
+  },
   cardGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: "14px",
   },
   infoCard: {
@@ -736,6 +994,117 @@ const styles = {
   },
   infoTitle: {
     marginTop: 0,
+    marginBottom: "12px",
+  },
+  infoText: {
+    margin: "8px 0",
+    fontWeight: 600,
+    color: "#334155",
+  },
+  miniGraphTitle: {
+    marginTop: "16px",
+    marginBottom: "10px",
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+  miniBarsWrap: {
+    height: "150px",
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "8px",
+  },
+  miniBarCol: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "6px",
+    height: "100%",
+  },
+  miniBarArea: {
+    flex: 1,
+    width: "100%",
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    padding: "4px",
+  },
+  miniBar: {
+    width: "100%",
+    minHeight: "6px",
+  },
+  miniBarLabel: {
+    fontSize: "0.75rem",
+    fontWeight: 700,
+    color: "#64748b",
+  },
+  smallMutedText: {
+    fontSize: "0.85rem",
+    color: "#64748b",
+    fontWeight: 600,
+  },
+  analyticsGrid: {
+    display: "grid",
+    gridTemplateColumns: "1.4fr 1fr",
+    gap: "16px",
+  },
+  groupedBarsWrap: {
+    height: "340px",
+    padding: "16px",
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "14px",
+  },
+  groupedHourCol: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    height: "100%",
+  },
+  groupedBarsArea: {
+    flex: 1,
+    width: "100%",
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: "6px",
+    background:
+      "repeating-linear-gradient(to top, #eef2f7 0px, #eef2f7 1px, transparent 1px, transparent 48px)",
+    border: "1px solid #e2e8f0",
+    padding: "8px",
+  },
+  groupedBar: {
+    width: "22px",
+    minHeight: "6px",
+    borderRadius: "4px 4px 0 0",
+  },
+  groupedHourLabel: {
+    fontSize: "0.8rem",
+    fontWeight: 700,
+    color: "#334155",
+  },
+  aboutGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "16px",
+  },
+  aboutCard: {
+    background: "#ffffff",
+    border: "2px solid #94a3b8",
+    boxShadow: "4px 4px 0 #94a3b8",
+  },
+  aboutText: {
+    margin: 0,
+    padding: "0 16px 14px 16px",
+    color: "#334155",
+    fontWeight: 600,
+    lineHeight: 1.45,
   },
   emptyState: {
     padding: "30px 16px",
